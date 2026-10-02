@@ -40,6 +40,9 @@ sanitizers:
     CC: clang
     CXX: clang++
   script:
+    # Clang's ASan/UBSan static runtimes (libclang_rt.asan*-x86_64.a) are not in
+    # the base clang package on ubuntu:24.04; libclang-rt-18-dev provides them.
+    - apt-get install -y -qq --no-install-recommends libclang-rt-18-dev
     - >
       cmake -S . -B build-asan
       -DCMAKE_BUILD_TYPE=Debug

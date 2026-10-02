@@ -44,6 +44,16 @@ notes. Educational — explicitly **not for production**.
   side-channel + changelog links). Docs-only; no code touched. Pending PM commit/version
   close-out.
 
+## Post-release maintenance
+
+- **CI fix (GitLab sanitizer job):** the bare `ubuntu:24.04` image shipped base `clang`
+  without Clang's compiler-rt sanitizer static archives, so the ASan/UBSan job failed at
+  `project()` configure time (`cannot find libclang_rt.asan*-x86_64.a`). Fixed by installing
+  `libclang-rt-18-dev` in the `sanitizers` job. CI-only; no library source/tests/CMake
+  changed, so no QA re-run required. GitHub Actions unaffected (hosted runner bundles the
+  runtimes). Local sanitizer run still 58/58 clean. Committed via `semver-commit-description`
+  (patch).
+
 ## Outstanding Items (tracked across stages)
 
 - **Side-channel notes (SRS SCN-1…SCN-3):** DONE — `docs/side-channel/overview.md` + the four
