@@ -16,7 +16,8 @@ notes. Educational — explicitly **not for production**.
 | 3. Implementation | Cpp Developer | Done (committed) |
 | 4. Verification | QA Engineer | Done (committed) |
 | 5. Release | Release Engineer | Done (committed) |
-| 6. Documentation | Technical Writer | In progress |
+| 6. Documentation | Technical Writer | Done (committed) |
+| 7. Release close-out | PM (semver-version-publish) | Tag v0.1.0 created |
 
 ## Running Log
 
@@ -37,14 +38,25 @@ notes. Educational — explicitly **not for production**.
 - Release stage complete: `.github/workflows/ci.yml` (GCC/Clang × Debug/Release + ASan/UBSan
   job), `.gitlab-ci.yml` equivalent, `VERSION` file at `0.1.0`. Local dry-run 58/58 clean.
   Committed via `semver-commit-description` (patch). Routed to Technical Writer.
+- Documentation stage complete: side-channel notes `docs/side-channel/{overview,ct_compare,
+  ct_select_swap,sha256,hmac_sha256}.md` (SCN-1…SCN-3 deliverable now satisfied), `CHANGELOG.md`
+  (Keep-a-Changelog, `Unreleased`→`0.1.0`), and README polish (verified API, added
+  side-channel + changelog links). Docs-only; no code touched. Pending PM commit/version
+  close-out.
 
 ## Outstanding Items (tracked across stages)
 
-- **Side-channel notes (SRS SCN-1…SCN-3):** `docs/side-channel/overview.md` + per-primitive
-  notes are a mandatory SRS deliverable, NOT yet written (correctly out of implementation
-  scope). **Owner: Technical Writer stage.** Must be done before final close-out.
-- **Assembly spot-check (OQ-6):** QA to perform `-O2 -S` inspection of `ct::memcmp_mask`,
-  `ct::select`, `ct::cswap`, and `hmac_sha256_verify` as constant-time evidence.
+- **Side-channel notes (SRS SCN-1…SCN-3):** DONE — `docs/side-channel/overview.md` + the four
+  per-primitive notes written at the Documentation stage. Mandatory SRS deliverable satisfied.
+- **Assembly spot-check (OQ-6):** DONE (QA stage) — `-O2 -S` inspection of `ct::memcmp_mask`,
+  `ct::select`, `ct::cswap`, and `hmac_sha256_verify` confirmed no secret-dependent branches
+  and HMAC verify via `ct::equal`; referenced as the evidence basis in the side-channel notes.
+- **Version close-out:** DONE — documentation committed; inaugural release tagged `v0.1.0`
+  via `semver-version-publish`. No prior tag existed and `VERSION` was deliberately
+  initialized to the intended first-release version `0.1.0`, so the inaugural tag is `v0.1.0`
+  (we tag the established first version rather than auto-bumping past it to 0.2.0).
+  `CHANGELOG.md` already finalized `0.1.0` (2026-10-02); `Unreleased` is empty. The tag push
+  is left to the user's explicit confirmation.
 
 ## PM Decisions (resolving SRS Open Questions)
 

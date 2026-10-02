@@ -108,6 +108,28 @@ int main() {
 }
 ```
 
+## Side-channel notes
+
+Each primitive ships with a written side-channel note, and a project-wide overview
+documents the shared threat model and limitations. These are **required reading** before
+drawing any conclusion about what this code does and does not protect against:
+
+- [Overview — threat model & shared limitations](docs/side-channel/overview.md)
+- [P-1 — constant-time compare](docs/side-channel/ct_compare.md)
+- [P-2 — constant-time select & swap](docs/side-channel/ct_select_swap.md)
+- [P-3 — SHA-256](docs/side-channel/sha256.md)
+- [P-4 — HMAC-SHA-256](docs/side-channel/hmac_sha256.md)
+
+Constant-time behavior is **best-effort source-level only** and **not guaranteed** across
+compilers, optimization levels, or hardware. The evidence basis is code review plus a `-O2`
+generated-assembly spot-check of the constant-time helpers and HMAC verification — a
+spot-check, **not** a formal proof. Attacks outside the timing model (cache /
+micro-architectural, speculative, power/EM, fault, DVFS) are **not** mitigated.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the release history.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
