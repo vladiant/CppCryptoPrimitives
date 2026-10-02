@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -39,6 +40,36 @@ TEST(Sha256Kat, EmptyString) {
 TEST(Sha256Kat, Abc) {
     EXPECT_EQ(hex_of("abc"),
               "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+}
+
+TEST(Sha256Kat, SingleByteA) {
+    // NIST CAVP single-byte vector; reference from Python hashlib.
+    EXPECT_EQ(hex_of("a"),
+              "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb");
+}
+
+TEST(Sha256Kat, SixtyFourZeroBytes) {
+    // Exactly one full block of zero bytes — a two-block case after padding.
+    std::vector<unsigned char> msg(64, 0x00);
+    sha256_digest d = sha256(msg.data(), msg.size());
+    EXPECT_EQ(to_hex(d.data(), d.size()),
+              "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b");
+}
+
+TEST(Sha256Kat, OneHundredTwentySevenA) {
+    // 127 bytes: last byte before the 0x80 pad forces a fresh final block.
+    std::vector<unsigned char> msg(127, 'a');
+    sha256_digest d = sha256(msg.data(), msg.size());
+    EXPECT_EQ(to_hex(d.data(), d.size()),
+              "c57e9278af78fa3cab38667bef4ce29d783787a2f731d4e12200270f0c32320a");
+}
+
+TEST(Sha256Kat, OneHundredTwentyEightA) {
+    // 128 bytes: exactly two blocks, padding spills into a third block.
+    std::vector<unsigned char> msg(128, 'a');
+    sha256_digest d = sha256(msg.data(), msg.size());
+    EXPECT_EQ(to_hex(d.data(), d.size()),
+              "6836cf13bac400e9105071cd6af47084dfacad4e5e302c94bfed24e013afb73e");
 }
 
 TEST(Sha256Kat, FiftySixByteBoundary) {
@@ -140,6 +171,39 @@ TEST(Sha256Reuse, ResetAllowsReuse) {
     h.update(reinterpret_cast<const unsigned char*>(a.data()), a.size());
     sha256_digest second = h.finalize();
     EXPECT_EQ(first, second);
+}
+
+TEST(Sha256Randomized, OneShotMatchesRandomlyChunkedStreaming) {
+    // Reproducible randomized cross-check (NFR-12): a fixed-seed RNG drives both
+    // the message content and the streaming split points, so any failure is
+    // deterministically reproducible. Validates one-shot == streaming over many
+    // random message lengths and chunkings without an external reference.
+    std::mt19937 rng(0xC0FFEEu); // fixed seed (NFR-12)
+    std::uniform_int_distribution<int> byte_dist(0, 255);
+    std::uniform_int_distribution<std::size_t> len_dist(0, 600);
+
+    for (int trial = 0; trial < 200; ++trial) {
+        const std::size_t len = len_dist(rng);
+        std::vector<unsigned char> msg(len);
+        for (std::size_t i = 0; i < len; ++i) {
+            msg[i] = static_cast<unsigned char>(byte_dist(rng));
+        }
+        const sha256_digest expected = sha256(msg.data(), msg.size());
+
+        Sha256 h;
+        std::size_t off = 0;
+        std::uniform_int_distribution<std::size_t> chunk_dist(0, 80);
+        while (off < msg.size()) {
+            std::size_t take = chunk_dist(rng);
+            if (take > msg.size() - off) {
+                take = msg.size() - off;
+            }
+            h.update(msg.data() + off, take);
+            off += take;
+        }
+        const sha256_digest got = h.finalize();
+        ASSERT_EQ(got, expected) << "trial=" << trial << " len=" << len;
+    }
 }
 
 } // namespace

@@ -86,6 +86,68 @@ TEST(HmacKat, Rfc4231Case7LargerThanBlockKeyAndData) {
         "9b09ffa71b942fcb27635fbcd5b0e944bfdc63644f0713938a7f51535c3a35e2");
 }
 
+// --- key-length boundary cases (around the 64-byte block) ------------------------
+
+// Deterministic key generator shared with the independent Python reference
+// (bytes (i*7+1) mod 256). Reference tags computed via Python hmac/hashlib.
+std::vector<unsigned char> gen_key(std::size_t n) {
+    std::vector<unsigned char> k(n);
+    for (std::size_t i = 0; i < n; ++i) {
+        k[i] = static_cast<unsigned char>((i * 7u + 1u) & 0xFFu);
+    }
+    return k;
+}
+
+const std::vector<unsigned char>& boundary_msg() {
+    static const std::vector<unsigned char> m =
+        bytes_of("Sample message for keylen=blocklen");
+    return m;
+}
+
+TEST(HmacKeyBoundary, ShorterThanBlock32) {
+    EXPECT_EQ(hmac_hex(gen_key(32), boundary_msg()),
+              "965705e520aaf4c224b22076aaf96140430a2cfeebdcdf18a1312fded80e7000");
+}
+
+TEST(HmacKeyBoundary, OneByteUnderBlock63) {
+    EXPECT_EQ(hmac_hex(gen_key(63), boundary_msg()),
+              "98e22702373c7ac147a80fdf055b360026a9aa86a0a34b0f38bc7e7edc23c6c5");
+}
+
+TEST(HmacKeyBoundary, ExactlyBlock64) {
+    // 64-byte key == block size: used directly as K0, no key hashing (RFC 2104).
+    EXPECT_EQ(hmac_hex(gen_key(64), boundary_msg()),
+              "6bf4ac0f78d4463cb7915e86d6a11e644ee54a5a6e6e507f13a036c3885d7cbc");
+}
+
+TEST(HmacKeyBoundary, OneByteOverBlock65) {
+    // 65-byte key > block size: hashed down to 32 bytes first (RFC 2104).
+    EXPECT_EQ(hmac_hex(gen_key(65), boundary_msg()),
+              "c3e2e10cf7f29bef1daf64e6026289fe9d9b6c294754a8050218823c203afe92");
+}
+
+TEST(HmacKeyBoundary, WellOverBlock100) {
+    EXPECT_EQ(hmac_hex(gen_key(100), boundary_msg()),
+              "6cadb9daaab0dfbee974385ff4502e7c745ab053b07d2e727213ffea36537f59");
+}
+
+// --- empty key / empty message edge cases (FR-10) --------------------------------
+
+TEST(HmacEdge, EmptyKeyNonEmptyMessage) {
+    EXPECT_EQ(hmac_hex({}, bytes_of("abc")),
+              "fd7adb152c05ef80dccf50a1fa4c05d5a3ec6da95575fc312ae7c5d091836351");
+}
+
+TEST(HmacEdge, NonEmptyKeyEmptyMessage) {
+    EXPECT_EQ(hmac_hex(bytes_of("key"), {}),
+              "5d5d139563c95b5967b9bd9a8c9b233a9dedb45072794cd232dc1b74832607d0");
+}
+
+TEST(HmacEdge, EmptyKeyEmptyMessage) {
+    EXPECT_EQ(hmac_hex({}, {}),
+              "b613679a0814d9ec772f95d778c35fc5ff1697c493715653c6c712144292c5ad");
+}
+
 // --- streaming equivalence -------------------------------------------------------
 
 TEST(HmacStreaming, MatchesOneShotAtManyChunkBoundaries) {
@@ -179,6 +241,38 @@ TEST(HmacVerify, RejectsWrongMessage) {
     const std::vector<unsigned char> wrong = bytes_of("Hi there");
     EXPECT_FALSE(hmac_sha256_verify(key.data(), key.size(), wrong.data(),
                                     wrong.size(), tag.data(), tag.size()));
+}
+
+TEST(HmacVerify, RejectsDegenerateTamperedTags) {
+    const std::vector<unsigned char> key = repeat(0x0b, 20);
+    const std::vector<unsigned char> msg = bytes_of("Hi There");
+    hmac_sha256_tag correct =
+        hmac_sha256(key.data(), key.size(), msg.data(), msg.size());
+
+    hmac_sha256_tag all_zero{};
+    all_zero.fill(0x00);
+    hmac_sha256_tag all_ones{};
+    all_ones.fill(0xFF);
+    // A tag equal to the correct one except its final byte flipped.
+    hmac_sha256_tag last_byte_off = correct;
+    last_byte_off.back() = static_cast<unsigned char>(last_byte_off.back() ^ 0x01u);
+
+    EXPECT_FALSE(hmac_sha256_verify(key.data(), key.size(), msg.data(), msg.size(),
+                                    all_zero.data(), all_zero.size()));
+    EXPECT_FALSE(hmac_sha256_verify(key.data(), key.size(), msg.data(), msg.size(),
+                                    all_ones.data(), all_ones.size()));
+    EXPECT_FALSE(hmac_sha256_verify(key.data(), key.size(), msg.data(), msg.size(),
+                                    last_byte_off.data(), last_byte_off.size()));
+}
+
+TEST(HmacVerify, AcceptsCorrectTagWithBlockSizedKey) {
+    // Exercise the verify path with a key exactly equal to the block size.
+    const std::vector<unsigned char> key = gen_key(64);
+    const std::vector<unsigned char> msg = boundary_msg();
+    hmac_sha256_tag tag =
+        hmac_sha256(key.data(), key.size(), msg.data(), msg.size());
+    EXPECT_TRUE(hmac_sha256_verify(key.data(), key.size(), msg.data(), msg.size(),
+                                   tag.data(), tag.size()));
 }
 
 } // namespace

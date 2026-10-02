@@ -51,4 +51,31 @@ TEST(Wipe, ArrayOverloadNonByteType) {
     }
 }
 
+TEST(Wipe, ClearsOnlyRequestedRange) {
+    // Wiping a sub-range must not disturb the surrounding bytes (len is exact).
+    std::vector<unsigned char> buf(16, 0xAB);
+    secure_wipe(buf.data() + 4, 8); // clear [4, 12)
+    for (std::size_t i = 0; i < buf.size(); ++i) {
+        if (i >= 4 && i < 12) {
+            EXPECT_EQ(buf[i], 0u) << "i=" << i;
+        } else {
+            EXPECT_EQ(buf[i], 0xABu) << "i=" << i;
+        }
+    }
+}
+
+TEST(Wipe, ClearsSingleByte) {
+    unsigned char b = 0x5A;
+    secure_wipe(&b, 1);
+    EXPECT_EQ(b, 0u);
+}
+
+TEST(Wipe, ClearsOddLengthBuffer) {
+    std::vector<unsigned char> buf(37, 0xFF);
+    secure_wipe(buf.data(), buf.size());
+    for (unsigned char b : buf) {
+        EXPECT_EQ(b, 0u);
+    }
+}
+
 } // namespace
