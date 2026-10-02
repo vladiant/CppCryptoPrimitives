@@ -12,8 +12,8 @@ notes. Educational — explicitly **not for production**.
 | Stage | Agent | Status |
 | --- | --- | --- |
 | 1. Requirements | Requirements Analyst | Done (committed) |
-| 2. Design | System Architect | In progress |
-| 3. Implementation | Cpp Developer | Pending |
+| 2. Design | System Architect | Done (committed) |
+| 3. Implementation | Cpp Developer | In progress |
 | 4. Verification | QA Engineer | Pending |
 | 5. Release | Release Engineer | Pending |
 | 6. Documentation | Technical Writer | Pending |
@@ -24,6 +24,9 @@ notes. Educational — explicitly **not for production**.
   Routed to Requirements Analyst to produce a lightweight SRS before any design/code.
 - Requirements stage complete: `docs/requirements/SRS.md`. MVP = P-1…P-4.
   Committed via `semver-commit-description` (minor). Routed to System Architect.
+- Design stage complete: `docs/design/DESIGN.md`. 4 modules (wipe→ct→sha256→hmac),
+  namespace `ctcrypto`, CMake + GoogleTest(FetchContent), scoped to MVP only.
+  Committed via `semver-commit-description` (minor). Routed to Cpp Developer.
 
 ## PM Decisions (resolving SRS Open Questions)
 
