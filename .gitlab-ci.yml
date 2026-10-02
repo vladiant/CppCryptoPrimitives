@@ -1,0 +1,48 @@
+# GitLab CI mirror of .github/workflows/ci.yml.
+# Builds ctcrypto warning-clean on GCC and Clang, runs the GoogleTest suite via
+# CTest, and enforces QA's mandatory ASan+UBSan gate.
+stages:
+  - build-test
+  - sanitize
+
+default:
+  image: ubuntu:24.04
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y -qq --no-install-recommends cmake make g++ clang git ca-certificates
+
+# Reusable build+test logic parameterised by compiler via CC/CXX.
+.build-test:
+  stage: build-test
+  script:
+    - cmake -S . -B build -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
+    - cmake --build build --parallel
+    - ctest --test-dir build --output-on-failure
+
+build-test:gcc:
+  extends: .build-test
+  variables:
+    CC: gcc
+    CXX: g++
+    BUILD_TYPE: Release
+
+build-test:clang:
+  extends: .build-test
+  variables:
+    CC: clang
+    CXX: clang++
+    BUILD_TYPE: Release
+
+# Mirror QA's mandatory gate: fail hard on any ASan/UBSan finding.
+sanitizers:
+  stage: sanitize
+  variables:
+    CC: clang
+    CXX: clang++
+  script:
+    - >
+      cmake -S . -B build-asan
+      -DCMAKE_BUILD_TYPE=Debug
+      -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all"
+    - cmake --build build-asan --parallel
+    - ctest --test-dir build-asan --output-on-failure

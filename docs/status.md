@@ -15,8 +15,8 @@ notes. Educational — explicitly **not for production**.
 | 2. Design | System Architect | Done (committed) |
 | 3. Implementation | Cpp Developer | Done (committed) |
 | 4. Verification | QA Engineer | Done (committed) |
-| 5. Release | Release Engineer | In progress |
-| 6. Documentation | Technical Writer | Pending |
+| 5. Release | Release Engineer | Done (committed) |
+| 6. Documentation | Technical Writer | In progress |
 
 ## Running Log
 
@@ -34,6 +34,9 @@ notes. Educational — explicitly **not for production**.
   GCC 13.3 + Clang 18.1, requirements traceability FR-1…FR-13 / NFR-1…NFR-3 covered,
   assembly spot-check (OQ-6) confirms no secret-dependent branches and HMAC verify via
   `ct::equal`. Committed via `semver-commit-description` (patch). Routed to Release Engineer.
+- Release stage complete: `.github/workflows/ci.yml` (GCC/Clang × Debug/Release + ASan/UBSan
+  job), `.gitlab-ci.yml` equivalent, `VERSION` file at `0.1.0`. Local dry-run 58/58 clean.
+  Committed via `semver-commit-description` (patch). Routed to Technical Writer.
 
 ## Outstanding Items (tracked across stages)
 
